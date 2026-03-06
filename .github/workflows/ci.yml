@@ -35,13 +35,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Build data-fetcher
+        run: docker build -t trading-system/data-fetcher:latest ./services/data-fetcher
       
-      - name: Build all services
-        run: |
-          docker build -t trading-system/data-fetcher:${{ github.sha }} ./services/data-fetcher
-          docker build -t trading-system/strategy-engine:${{ github.sha }} ./services/strategy-engine
-          docker build -t trading-system/executor:${{ github.sha }} ./services/executor
-          docker build -t trading    tem/dashbo          docker build -ter   es/dashboard
-          docker build -t ages built successfully!"
+      - name: Build strategy-engine
+        run: docker build -t trading-system/strategy-engine:latest ./services/strategy-engine
+      
+      - name: Build executor
+        run: docker build -t trading-system/executor:latest ./services/executor
+      
+      - name: Build dashboard
+        run: docker build -t trading-system/dashboard:latest ./services/dashboard
+      
+      - name: Build success
+        run: echo "✅ All images built successfully!"

@@ -1,0 +1,74 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'services/**'
+      - 'docker-compose.yml'
+
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build and push data-fetcher
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG ./services/data-fetcher
+          docker build -t $ECR_REGISTRY/trading-data-fetcher:latest ./services/data-fetcher
+          docker push $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG
+          docker push $ECR_REGISTRY/trading-data-fetcher:latest
+      
+      - name: Build and push strategy-engine
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG ./services/strategy-engine
+          docker build -t $ECR_REGISTRY/trading-strategy-engine:latest ./services/strategy-engine
+          docker push $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG
+          docker push $ECR_REGISTRY/trading-strategy-engine:latest
+      
+      - name: Build and push executor
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/trading-executor:$IMAGE_TAG ./services/executor
+          docker build -t $ECR_REGISTRY/trading-executor:latest ./services/executor
+          docker push $ECR_REGISTRY/trading-executor:$IMAGE_TAG
+          docker push $ECR_REGISTRY/trading-executor:latest
+      
+      - name: Build and push dashboard
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG ./services/dashboard
+          docker build -t $ECR_REGISTRY/trading-dashboard:latest ./services/dashboard
+          docker push $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG
+          docker push $ECR_REGISTRY/trading-dashboard:latest
+
+      - name: Deploy success
+        run: echo "Deployed to ECR successfully!"

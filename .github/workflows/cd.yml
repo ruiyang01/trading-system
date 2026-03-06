@@ -45,3 +45,22 @@ jobs:
             docker push $ECR_REGISTRY/trading-$service:latest
             echo "✅ $service pushed with tags: $IMAGE_TAG, latest"
           done
+
+      - name: Update K8s manifests
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          sed -i "s|image: .*trading-data-fetcher.*|image: $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG|" k8s/data-fetcher.yaml
+          sed -i "s|image: .*trading-strategy-engine.*|image: $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG|" k8s/strategy-engine.yaml
+          sed -i "s|image: .*trading-executor.*|image: $ECR_REGISTRY/trading-executor:$IMAGE_TAG|" k8s/executor.yaml
+          sed -i "s|image: .*trading-dashboard.*|image: $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG|" k8s/dashboard.yaml
+          echo "✅ K8s manifests updated"
+      
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add k8s/
+          git diff --staged --quiet || git commit -m "Update image tags to ${{ github.sha }}"
+          git push

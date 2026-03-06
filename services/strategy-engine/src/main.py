@@ -5,7 +5,7 @@ import json
 import redis.asyncio as redis
 
 from config import config
-from strategies import MomentumStrategy, RSIStrategy, MACDStrategy, BollingerStrategy, SignalType
+from strategies import RSIStrategy, SignalType
 
 logging.basicConfig(
     level=getattr(logging, config.log_level),
@@ -18,10 +18,7 @@ class StrategyEngine:
     def __init__(self):
         self.redis_client = None
         self.strategies = [
-            MomentumStrategy(),
-            RSIStrategy(),
-            MACDStrategy(),
-            BollingerStrategy()
+            RSIStrategy()
         ]
         self.price_history: dict[str, list[float]] = {}
     

@@ -32,7 +32,7 @@ metadata:
   name: dashboard
   namespace: trading-system
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: dashboard
   ports:

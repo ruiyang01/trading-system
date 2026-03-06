@@ -6,6 +6,9 @@ on:
     paths:
       - 'services/**'
 
+permissions:
+  contents: write
+  
 env:
   AWS_REGION: eu-central-1
 

@@ -17,7 +17,7 @@ spec:
         - name: ecr-secret
       containers:
         - name: executor
-          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-executor:d539a557c36bda9892e862522ce5cfcfe72969d3
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-executor:e1cc35e0f44017d7e0b22cbe8c142500fd592ebf
           env:
             - name: REDIS_URL
               value: redis://redis:6379

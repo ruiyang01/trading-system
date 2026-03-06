@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: trading-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: IMAGE_PLACEHOLDER
+          ports:
+            - containerPort: 8000
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: DATABASE_URL
+              value: postgresql://trader:trader123@postgres:5432/trading
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: trading-system
+spec:
+  type: LoadBalancer
+  selector:
+    app: dashboard
+  ports:
+    - port: 80
+      targetPort: 8000

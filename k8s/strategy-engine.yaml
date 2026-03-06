@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strategy-engine
+  namespace: trading-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: strategy-engine
+  template:
+    metadata:
+      labels:
+        app: strategy-engine
+    spec:
+      containers:
+        - name: strategy-engine
+          image: IMAGE_PLACEHOLDER
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: LOG_LEVEL
+              value: INFO

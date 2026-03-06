@@ -5,19 +5,22 @@ on:
     branches: [main]
     paths:
       - 'services/**'
-      - 'docker-compose.yml'
 
 env:
   AWS_REGION: eu-central-1
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    
+    outputs:
+      image_tag: ${{ github.sha }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -30,45 +33,34 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       
-      - name: Build and push data-fetcher
+      - name: Build and push images
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG ./services/data-fetcher
-          docker build -t $ECR_REGISTRY/trading-data-fetcher:latest ./services/data-fetcher
-          docker push $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG
-          docker push $ECR_REGISTRY/trading-data-fetcher:latest
+          services=("data-fetcher" "strategy-engine" "executor" "dashboard")
+          for service in "${services[@]}"; do
+            echo "Building $service..."
+            docker build -t $ECR_REGISTRY/trading-$service:$IMAGE_TAG ./services/$service
+            docker push $ECR_REGISTRY/trading-$service:$IMAGE_TAG
+            echo "✅ $service pushed"
+          done
       
-      - name: Build and push strategy-engine
+      - name: Update K8s manifests
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG ./services/strategy-engine
-          docker build -t $ECR_REGISTRY/trading-strategy-engine:latest ./services/strategy-engine
-          docker push $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG
-          docker push $ECR_REGISTRY/trading-strategy-engine:latest
-      
-      - name: Build and push executor
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/trading-executor:$IMAGE_TAG ./services/executor
-          docker build -t $ECR_REGISTRY/trading-executor:latest ./services/executor
-          docker push $ECR_REGISTRY/trading-executor:$IMAGE_TAG
-          docker push $ECR_REGISTRY/trading-executor:latest
-      
-      - name: Build and push dashboard
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG ./services/dashboard
-          docker build -t $ECR_REGISTRY/trading-dashboard:latest ./services/dashboard
-          docker push $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG
-          docker push $ECR_REGISTRY/trading-dashboard:latest
+          # Update image tags in k8s manifests
+          sed -i "s|image: .*|image: $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG|" k8s/data-fetcher.yaml
+          sed -i "s|image: .*|image: $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG|" k8s/strategy-engine.yaml
+          sed -i "s|image: .*|image: $ECR_REGISTRY/trading-executor:$IMAGE_TAG|" k8s/executor.yaml
+          sed -i "s|image: .*trading-dashboard.*|image: $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG|" k8s/dashboard.yaml
 
-      - name: Deploy success
-        run: echo "Deployed to ECR successfully!"
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add k8s/
+          git diff --staged --quiet || git commit -m "Update images to ${{ github.sha }}"
+          git push

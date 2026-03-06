@@ -11,7 +11,7 @@ class Config:
     ])
     
     stock_symbols: list[str] = field(default_factory=lambda: [
-        "NVDA", "IREN", "SATS"
+        "NVDA", "IREN", "SATS", "MRVL"
     ])
     
     crypto_interval: int = 5

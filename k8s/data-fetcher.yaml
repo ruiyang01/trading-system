@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: data-fetcher
-          image: IMAGE_PLACEHOLDER
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-data-fetcher:645f0a5c23040defb3cfa4b4da6ac9348ae496aa
           env:
             - name: REDIS_URL
               value: redis://redis:6379

@@ -13,9 +13,11 @@ spec:
       labels:
         app: executor
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: executor
-          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-executor:645f0a5c23040defb3cfa4b4da6ac9348ae496aa
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-executor:latest
           env:
             - name: REDIS_URL
               value: redis://redis:6379

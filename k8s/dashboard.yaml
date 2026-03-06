@@ -13,9 +13,11 @@ spec:
       labels:
         app: dashboard
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: dashboard
-          image: IMAGE_PLACEHOLDER
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-dashboard:latest
           ports:
             - containerPort: 8000
           env:

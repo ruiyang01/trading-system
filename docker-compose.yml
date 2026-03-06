@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader123
+      POSTGRES_DB: trading
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  data-fetcher:
+    build: ./services/data-fetcher
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+
+  strategy-engine:
+    build: ./services/strategy-engine
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+
+  executor:
+    build: ./services/executor
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://trader:trader123@postgres:5432/trading
+      - LOG_LEVEL=INFO
+    depends_on:
+      - redis
+      - postgres
+
+  dashboard:
+    build: ./services/dashboard
+    ports:
+      - "3001:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://trader:trader123@postgres:5432/trading
+    depends_on:
+      - redis
+      - postgres
+
+volumes:
+  postgres_data:

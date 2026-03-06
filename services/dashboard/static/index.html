@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1419;
+            color: #e7e9ea;
+            padding: 20px;
+        }
+        h1 { color: #1d9bf0; margin-bottom: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+        .card {
+            background: #16202a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #2f3336;
+        }
+        .card h2 { color: #8899a6; font-size: 14px; margin-bottom: 15px; }
+        .card.wide { grid-column: span 2; }
+        .balance { font-size: 32px; color: #00c853; }
+        .cash { font-size: 16px; color: #8899a6; margin-top: 5px; }
+        .price-row, .position-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #2f3336;
+        }
+        .price-row:last-child, .position-row:last-child { border-bottom: none; }
+        .symbol { font-weight: bold; }
+        .price { font-family: monospace; }
+        .change { padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 8px; }
+        .positive { background: #00c85322; color: #00c853; }
+        .negative { background: #ff525222; color: #ff5252; }
+        .signal, .trade {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .signal.buy, .trade.buy { background: #00c85322; border-left: 3px solid #00c853; }
+        .signal.sell, .trade.sell { background: #ff525222; border-left: 3px solid #ff5252; }
+        #signals, #orders { max-height: 350px; overflow-y: auto; }
+        .no-data { color: #8899a6; }
+        .pos-value { color: #00c853; font-size: 12px; }
+        .trade-info { display: flex; justify-content: space-between; }
+        .trade-details { color: #8899a6; font-size: 11px; margin-top: 4px; }
+        .stats-row { display: flex; justify-content: space-between; padding: 8px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 Trading Dashboard</h1>
+        
+        <div class="grid">
+            <!-- Account -->
+            <div class="card">
+                <h2>💰 ACCOUNT</h2>
+                <div class="balance" id="total-equity">$10,000.00</div>
+                <div class="cash">Cash: <span id="balance">$10,000.00</span></div>
+                <div style="margin-top: 15px;">
+                    <div class="stats-row">
+                        <span>Orders</span>
+                        <span id="total-orders">0</span>
+                    </div>
+                    <div class="stats-row">
+                        <span>P&L</span>
+                        <span id="pnl">$0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Positions -->
+            <div class="card">
+                <h2>📊 POSITIONS</h2>
+                <div id="positions"><div class="no-data">No positions yet</div></div>
+            </div>
+            
+            <!-- Crypto -->
+            <div class="card">
+                <h2>🪙 CRYPTO</h2>
+                <div id="crypto-prices"><div class="no-data">Loading...</div></div>
+            </div>
+            
+            <!-- Stocks -->
+            <div class="card">
+                <h2>📉 STOCKS</h2>
+                <div id="stock-prices"><div class="no-data">Loading...</div></div>
+            </div>
+            
+            <!-- Signals -->
+            <div class="card wide">
+                <h2>🚨 LIVE SIGNALS</h2>
+                <div id="signals"><div class="no-data">Waiting for signals...</div></div>
+            </div>
+            
+            <!-- Orders -->
+            <div class="card wide">
+                <h2>📝 ORDER HISTORY</h2>
+                <div id="orders"><div class="no-data">No orders yet</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPrices = {};
+        const INITIAL_BALANCE = 10000;
+        
+        async function loadPrices() {
+            try {
+                const res = await fetch('/api/prices');
+                const prices = await res.json();
+                
+                const cryptoContainer = document.getElementById('crypto-prices');
+                const stockContainer = document.getElementById('stock-prices');
+                
+                cryptoContainer.innerHTML = '';
+                stockContainer.innerHTML = '';
+                
+                for (const [symbol, data] of Object.entries(prices)) {
+                    currentPrices[symbol] = data.price;
+                    const isCrypto = data.asset_type === 'crypto';
+                    const container = isCrypto ? cryptoContainer : stockContainer;
+                    
+                    const changeClass = data.change_24h >= 0 ? 'positive' : 'negative';
+                    const changeSign = data.change_24h >= 0 ? '+' : '';
+                    
+                    const row = document.createElement('div');
+                    row.className = 'price-row';
+                    row.innerHTML = `
+                        <span class="symbol">${symbol}</span>
+                        <span>
+                            <span class="price">$${data.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                            <span class="change ${changeClass}">${changeSign}${data.change_24h?.toFixed(2) || 0}%</span>
+                        </span>
+                    `;
+                    container.appendChild(row);
+                }
+            } catch (e) {
+                console.error('Error loading prices:', e);
+            }
+        }
+        
+        async function loadAccount() {
+            try {
+                const res = await fetch('/api/account');
+                const data = await res.json();
+                
+                const cash = data.balance.USD;
+                document.getElementById('balance').textContent = 
+                    `$${cash.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                document.getElementById('total-orders').textContent = data.total_orders;
+                
+                let positionsValue = 0;
+                const posContainer = document.getElementById('positions');
+                
+                if (Object.keys(data.positions).length > 0) {
+                    posContainer.innerHTML = '';
+                    for (const [sym, qty] of Object.entries(data.positions)) {
+                        const price = currentPrices[sym] || 0;
+                        const value = qty * price;
+                        positionsValue += value;
+                        
+                        const row = document.createElement('div');
+                        row.className = 'position-row';
+                        row.innerHTML = `
+                            <span>${sym}</span>
+                            <span>
+                                <div>${qty.toFixed(6)}</div>
+                                <div class="pos-value">≈ $${value.toFixed(2)}</div>
+                            </span>
+                        `;
+                        posContainer.appendChild(row);
+                    }
+                } else {
+                    posContainer.innerHTML = '<div class="no-data">No positions yet</div>';
+                }
+                
+                const totalEquity = cash + positionsValue;
+                const pnl = totalEquity - INITIAL_BALANCE;
+                
+                const equityEl = document.getElementById('total-equity');
+                equityEl.textContent = `$${totalEquity.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+                equityEl.style.color = totalEquity >= INITIAL_BALANCE ? '#00c853' : '#ff5252';
+                
+                const pnlEl = document.getElementById('pnl');
+                const pnlSign = pnl >= 0 ? '+' : '';
+                pnlEl.textContent = `${pnlSign}$${pnl.toFixed(2)}`;
+                pnlEl.style.color = pnl >= 0 ? '#00c853' : '#ff5252';
+                
+                // 显示订单
+                const ordersContainer = document.getElementById('orders');
+                if (data.orders && data.orders.length > 0) {
+                    ordersContainer.innerHTML = '';
+                    for (const order of data.orders.reverse()) {
+                        const div = document.createElement('div');
+                        div.className = `trade ${order.side}`;
+                        
+                        const time = new Date(order.timestamp).toLocaleTimeString();
+                        const value = order.quantity * order.price;
+                        
+                        div.innerHTML = `
+                            <div class="trade-info">
+                                <span><strong>${order.side.toUpperCase()}</strong> ${order.symbol}</span>
+                                <span>$${value.toFixed(2)}</span>
+                            </div>
+                            <div class="trade-details">
+                                ${order.quantity.toFixed(6)} @ $${order.price.toFixed(2)} | ${order.status} | ${time}
+                            </div>
+                        `;
+                        ordersContainer.appendChild(div);
+                    }
+                } else {
+                    ordersContainer.innerHTML = '<div class="no-data">No orders yet</div>';
+                }
+            } catch (e) {
+                console.error('Error loading account:', e);
+            }
+        }
+        
+        function connectWebSocket() {
+            const ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            ws.onopen = () => console.log('WebSocket connected');
+            
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                
+                if (msg.type === 'prices') {
+                    updatePrice(msg.data);
+                } else if (msg.type === 'signals') {
+                    addSignal(msg.data);
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        function updatePrice(data) {
+            currentPrices[data.symbol] = data.price;
+            
+            const isCrypto = data.asset_type === 'crypto';
+            const container = document.getElementById(isCrypto ? 'crypto-prices' : 'stock-prices');
+            
+            let row = container.querySelector(`[data-symbol="${data.symbol}"]`);
+            if (!row) {
+                row = document.createElement('div');
+                row.className = 'price-row';
+                row.setAttribute('data-symbol', data.symbol);
+                const noData = container.querySelector('.no-data');
+                if (noData) noData.remove();
+                container.appendChild(row);
+            }
+            
+            const changeClass = data.change_24h >= 0 ? 'positive' : 'negative';
+            const changeSign = data.change_24h >= 0 ? '+' : '';
+            
+            row.innerHTML = `
+                <span class="symbol">${data.symbol}</span>
+                <span>
+                    <span class="price">$${data.price.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span class="change ${changeClass}">${changeSign}${data.change_24h?.toFixed(2) || 0}%</span>
+                </span>
+            `;
+        }
+        
+        function addSignal(data) {
+            const container = document.getElementById('signals');
+            const noData = container.querySelector('.no-data');
+            if (noData) noData.remove();
+            
+            const signal = document.createElement('div');
+            signal.className = `signal ${data.signal_type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            signal.innerHTML = `
+                <div class="trade-info">
+                    <span><strong>${data.signal_type.toUpperCase()}</strong> ${data.symbol} @ $${data.price.toFixed(2)}</span>
+                    <span>${time}</span>
+                </div>
+                <div class="trade-details">${data.strategy} | confidence: ${(data.confidence * 100).toFixed(0)}%</div>
+            `;
+            
+            container.insertBefore(signal, container.firstChild);
+            
+            while (container.children.length > 15) {
+                container.removeChild(container.lastChild);
+            }
+            
+            // 刷新账户信息
+            setTimeout(loadAccount, 500);
+        }
+        
+        // 初始化
+        loadPrices();
+        loadAccount();
+        connectWebSocket();
+        
+        setInterval(loadPrices, 5000);
+        setInterval(loadAccount, 3000);
+    </script>
+</body>
+</html>

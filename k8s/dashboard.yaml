@@ -20,6 +20,13 @@ spec:
           image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-dashboard:c3656c059d17f00ee84664b2bdba20d786a1b080
           ports:
             - containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           env:
             - name: REDIS_URL
               value: redis://redis:6379

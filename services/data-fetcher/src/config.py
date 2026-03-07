@@ -7,7 +7,7 @@ class Config:
     redis_url: str = field(default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379"))
     
     crypto_symbols: list[str] = field(default_factory=lambda: [
-        "BTCUSDT", "ETHUSDT", "SOLUSDT"
+        "BTCUSDT", "ETHUSDT", "DOGEUSDT", "SOLUSDT"
     ])
     
     stock_symbols: list[str] = field(default_factory=lambda: [

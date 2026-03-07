@@ -17,7 +17,7 @@ spec:
         - name: ecr-secret
       containers:
         - name: strategy-engine
-          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-strategy-engine:e1cc35e0f44017d7e0b22cbe8c142500fd592ebf
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-strategy-engine:c3656c059d17f00ee84664b2bdba20d786a1b080
           env:
             - name: REDIS_URL
               value: redis://redis:6379

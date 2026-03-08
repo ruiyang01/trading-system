@@ -4,7 +4,6 @@ on:
   push:
     branches: 
       - main
-      - production
     paths:
       - 'services/**'
 
@@ -48,7 +47,7 @@ jobs:
             echo "✅ $service pushed with tags: $IMAGE_TAG, latest"
           done
 
-  deploy-staging:
+  update-staging:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -56,6 +55,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update staging manifests
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -72,31 +73,4 @@ jobs:
           git config user.email "122395031+ruiyang01@users.noreply.github.com"
           git add k8s/
           git diff --staged --quiet || git commit -m "Deploy to staging: ${{ github.sha }}"
-          git push
-
-  deploy-production:
-    needs: build-and-push
-    if: github.ref == 'refs/heads/production'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Update production manifests
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          sed -i "s|image: .*trading-data-fetcher.*|image: $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG|" k8s/production/data-fetcher.yaml
-          sed -i "s|image: .*trading-strategy-engine.*|image: $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG|" k8s/production/strategy-engine.yaml
-          sed -i "s|image: .*trading-executor.*|image: $ECR_REGISTRY/trading-executor:$IMAGE_TAG|" k8s/production/executor.yaml
-          sed -i "s|image: .*trading-dashboard.*|image: $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG|" k8s/production/dashboard.yaml
-      
-      - name: Commit and push
-        run: |
-          git config user.name "ruiyang01"
-          git config user.email "122395031+ruiyang01@users.noreply.github.com"
-          git add k8s/production/
-          git diff --staged --quiet || git commit -m "Deploy to production: ${{ github.sha }}"
           git push

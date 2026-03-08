@@ -4,7 +4,6 @@ on:
   push:
     branches: 
       - main
-      - production
     paths:
       - 'services/**'
 
@@ -13,6 +12,7 @@ permissions:
 
 env:
   AWS_REGION: eu-central-1
+  ECR_REGISTRY: 491325670398.dkr.ecr.eu-central-1.amazonaws.com
 
 jobs:
   build-and-push:
@@ -35,20 +35,17 @@ jobs:
       
       - name: Build and push images
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           services=("data-fetcher" "strategy-engine" "executor" "dashboard")
           for service in "${services[@]}"; do
             echo "Building $service..."
-            docker build -t $ECR_REGISTRY/trading-$service:$IMAGE_TAG ./services/$service
-            docker build -t $ECR_REGISTRY/trading-$service:latest ./services/$service
-            docker push $ECR_REGISTRY/trading-$service:$IMAGE_TAG
-            docker push $ECR_REGISTRY/trading-$service:latest
-            echo "✅ $service pushed with tags: $IMAGE_TAG, latest"
+            docker build -t ${{ env.ECR_REGISTRY }}/trading-$service:$IMAGE_TAG ./services/$service
+            docker push ${{ env.ECR_REGISTRY }}/trading-$service:$IMAGE_TAG
+            echo "✅ $service pushed"
           done
 
-  deploy-staging:
+  update-staging:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -56,15 +53,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update staging manifests
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          sed -i "s|image: .*trading-data-fetcher.*|image: $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG|" k8s/staging/data-fetcher.yaml
-          sed -i "s|image: .*trading-strategy-engine.*|image: $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG|" k8s/staging/strategy-engine.yaml
-          sed -i "s|image: .*trading-executor.*|image: $ECR_REGISTRY/trading-executor:$IMAGE_TAG|" k8s/staging/executor.yaml
-          sed -i "s|image: .*trading-dashboard.*|image: $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG|" k8s/staging/dashboard.yaml
+          for file in k8s/staging/data-fetcher.yaml k8s/staging/strategy-engine.yaml k8s/staging/executor.yaml k8s/staging/dashboard.yaml; do
+            service=$(basename $file .yaml)
+            sed -i "s|image:.*trading-${service}.*|image: ${{ env.ECR_REGISTRY }}/trading-${service}:$IMAGE_TAG|" $file
+          done
+          
+          echo "Updated images:"
+          grep "image:" k8s/staging/*.yaml  
       
       - name: Commit and push changes
         run: |
@@ -72,31 +73,4 @@ jobs:
           git config user.email "122395031+ruiyang01@users.noreply.github.com"
           git add k8s/
           git diff --staged --quiet || git commit -m "Deploy to staging: ${{ github.sha }}"
-          git push
-
-  deploy-production:
-    needs: build-and-push
-    if: github.ref == 'refs/heads/production'
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Update production manifests
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          sed -i "s|image: .*trading-data-fetcher.*|image: $ECR_REGISTRY/trading-data-fetcher:$IMAGE_TAG|" k8s/production/data-fetcher.yaml
-          sed -i "s|image: .*trading-strategy-engine.*|image: $ECR_REGISTRY/trading-strategy-engine:$IMAGE_TAG|" k8s/production/strategy-engine.yaml
-          sed -i "s|image: .*trading-executor.*|image: $ECR_REGISTRY/trading-executor:$IMAGE_TAG|" k8s/production/executor.yaml
-          sed -i "s|image: .*trading-dashboard.*|image: $ECR_REGISTRY/trading-dashboard:$IMAGE_TAG|" k8s/production/dashboard.yaml
-      
-      - name: Commit and push
-        run: |
-          git config user.name "ruiyang01"
-          git config user.email "122395031+ruiyang01@users.noreply.github.com"
-          git add k8s/production/
-          git diff --staged --quiet || git commit -m "Deploy to production: ${{ github.sha }}"
           git push

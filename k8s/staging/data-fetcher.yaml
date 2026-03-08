@@ -17,7 +17,7 @@ spec:
         - name: ecr-secret
       containers:
         - name: data-fetcher
-          image: /trading-data-fetcher:c816936a41a127567460b3c6f83c279c100e8989
+          image: image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-data-fetcher:da498e64e44c7b00d499ecbfd30a29a208261249
           env:
             - name: REDIS_URL
               value: redis://redis:6379

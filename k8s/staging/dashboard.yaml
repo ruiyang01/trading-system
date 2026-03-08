@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard
+  namespace: trading-system-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dashboard
+  template:
+    metadata:
+      labels:
+        app: dashboard
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: dashboard
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-dashboard:c3656c059d17f00ee84664b2bdba20d786a1b080
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: DATABASE_URL
+              value: postgresql://trader:trader123@postgres:5432/trading
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard
+  namespace: trading-system-staging
+spec:
+  type: LoadBalancer
+  selector:
+    app: dashboard
+  ports:
+    - port: 80
+      targetPort: 8000

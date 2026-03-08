@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: strategy-engine
+  namespace: trading-system-production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: strategy-engine
+  template:
+    metadata:
+      labels:
+        app: strategy-engine
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: strategy-engine
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-strategy-engine:c3656c059d17f00ee84664b2bdba20d786a1b080
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: LOG_LEVEL
+              value: INFO

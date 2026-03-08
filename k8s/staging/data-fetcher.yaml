@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-fetcher
+  namespace: trading-system-staging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-fetcher
+  template:
+    metadata:
+      labels:
+        app: data-fetcher
+    spec:
+      imagePullSecrets:
+        - name: ecr-secret
+      containers:
+        - name: data-fetcher
+          image: /trading-data-fetcher:1d9770115bdcb15aa0d881d9b3959e3e8a414c66
+          env:
+            - name: REDIS_URL
+              value: redis://redis:6379
+            - name: LOG_LEVEL
+              value: INFO

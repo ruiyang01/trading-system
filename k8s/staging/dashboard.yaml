@@ -17,7 +17,7 @@ spec:
         - name: ecr-secret
       containers:
         - name: dashboard
-          image: /trading-dashboard:1d9770115bdcb15aa0d881d9b3959e3e8a414c66
+          image: 491325670398.dkr.ecr.eu-central-1.amazonaws.com/trading-dashboard:1d9770115bdcb15aa0d881d9b3959e3e8a414c66
           ports:
             - containerPort: 8000
           resources:

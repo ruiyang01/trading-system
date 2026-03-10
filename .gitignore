@@ -26,3 +26,4 @@ postgres_data/
 # OS
 .DS_Store
 Thumbs.db
+k8s/secrets/

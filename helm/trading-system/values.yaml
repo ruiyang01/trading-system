@@ -1,0 +1,47 @@
+# Default values for trading-system
+
+namespace: trading-system
+
+# Image settings
+image:
+  registry: 491325670398.dkr.ecr.eu-central-1.amazonaws.com
+  tag: latest
+  pullPolicy: Always
+
+# Service replicas
+replicas:
+  dashboard: 1
+  dataFetcher: 1
+  strategyEngine: 1
+  executor: 1
+
+# Resource limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Database settings
+postgres:
+  enabled: true
+  image: postgres:15-alpine
+  credentials:
+    secretName: postgres-credentials
+
+# Redis settings
+redis:
+  enabled: true
+  image: redis:7-alpine
+
+# Ingress settings
+ingress:
+  enabled: true
+  className: nginx
+  host: trading.local
+
+# Network policies
+networkPolicy:
+  enabled: true

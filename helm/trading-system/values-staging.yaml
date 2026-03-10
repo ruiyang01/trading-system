@@ -1,0 +1,13 @@
+namespace: trading-system-staging
+
+image:
+  tag: latest
+
+replicas:
+  dashboard: 1
+  dataFetcher: 1
+  strategyEngine: 1
+  executor: 1
+
+ingress:
+  host: staging.trading.local

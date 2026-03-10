@@ -1,0 +1,6 @@
+apiVersion: v2
+name: trading-system
+description: A trading system with real-time data processing
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

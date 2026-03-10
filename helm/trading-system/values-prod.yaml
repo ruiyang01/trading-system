@@ -1,0 +1,21 @@
+namespace: trading-system-production
+
+image:
+  tag: latest
+
+replicas:
+  dashboard: 2
+  dataFetcher: 2
+  strategyEngine: 2
+  executor: 2
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+ingress:
+  host: prod.trading.local
